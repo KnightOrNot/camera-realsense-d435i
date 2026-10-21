@@ -54,18 +54,15 @@ TimeoutStopSec=15
 WantedBy=default.target
 """)
 subprocess.run(["systemctl", "--user", "daemon-reload"], check=True)
-if args.enable:
-    for camera in ("cam1", "cam2"):
-        subprocess.run(
-            [
-                "systemctl",
-                "--user",
-                "enable",
-                "--now",
-                f"camera-realsense-d435i@{camera}.service",
-            ],
-            check=True,
-        )
+for camera in ("cam1", "cam2"):
+    # Default installation also removes an older boot-enable link, without
+    # stopping a running session. Local connect/preview starts disabled units.
+    operation = ["enable", "--now"] if args.enable else ["disable"]
+    subprocess.run(
+        ["systemctl", "--user", *operation, f"camera-realsense-d435i@{camera}.service"],
+        check=True,
+    )
 print(
-    "Installed cam1/cam2 units; camera acquisition starts only on an API start request."
+    "Installed cam1/cam2 units; boot autostart "
+    + ("enabled." if args.enable else "disabled; use local connect/preview to start.")
 )

@@ -24,7 +24,8 @@ uv run --locked camera-realsense-d435i preview --camera cam2
 
 在集成仓库 `xcore-controller` 中，也可使用 `./start_camera.sh` 一次启动两台。
 关闭网页不会停止采集；请使用网页“停止采集”按钮或以下 `stop` 命令。
-命令返回后相机服务与 SSH 隧道持续运行；API 服务开机启动时保持 idle，不自动打开相机。
+命令返回后相机服务与 SSH 隧道持续运行。当前两个服务均已取消开机／登录自启；
+执行本地 `preview`／`connect` 时才通过 SSH 按需启动 API，`preview` 进一步开始采集。
 
 ## 命令
 
@@ -85,6 +86,8 @@ uv run --locked camera-realsense-d435i disconnect --camera cam2
   请检查现场镜头朝向／遮挡与被测距离。这是对画面的判断，不是已确认硬件故障。
 - 已通过两台四路真实 MJPEG JPEG 帧检查、cam1 停止／重启、非法 profile 报错及恢复，
   期间 cam2 的会话保持连续；测试结束后两个相机采集均已停止，API 保持空闲。
+- 后续按用户要求将相机与夹爪服务均改为按需启动，已验证相机 unit 的自启状态为 disabled；
+  修改自启配置时未中断正在运行的相机会话，无需重启整机。
 - 离线测试覆盖单采集所有权、启停重启、构造／采集错误、无帧超时、陈旧帧拒绝、
   HTTP MJPEG、原始深度快照保存及错误请求；命令见开发文档。
 - 本环境未提供可用的自动化浏览器；已验证网页 HTTP、实际 MJPEG 帧和截图，

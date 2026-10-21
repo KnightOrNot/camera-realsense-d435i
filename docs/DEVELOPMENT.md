@@ -63,12 +63,15 @@ tar -xzf /tmp/camera-d435i.tar.gz
 python3 -m venv .venv                    # 确认此 python3 >=3.11；已有 .venv 时跳过
 .venv/bin/python -m pip install --only-binary=:all: --require-hashes \
   -r deploy/requirements-server.txt
-.venv/bin/python deploy/install_service.py --enable
+.venv/bin/python deploy/install_service.py
 ```
 
 安装脚本生成两个明确命名的用户 unit，保留现有相机 JSON 配置，备份已有 unit 到 `.previous`，
-并运行 daemon-reload。`--enable` 将空闲 API 服务设置为用户启动时自动运行；
-需要无人登录也运行时，在远端执行 `sudo loginctl enable-linger "$USER"`（现场已开启）。
+并运行 daemon-reload。默认取消两个 unit 的开机／登录自启（disable，不停止当前进程）；
+本地 `preview`／`connect` 通过 SSH 执行 `systemctl --user start` 按需启动服务。
+`--enable` 是显式选择恢复开机自启的兼容选项，当前现场部署不要添加此选项。
+`sudo loginctl enable-linger "$USER"`（现场已开启）允许用户管理器在 SSH 断开后继续运行，
+它不会让已 disabled 的相机／夹爪服务自动启动。SSH 服务本身仍需正常运行以接收本地命令。
 修改源码后，先停采集再 `systemctl --user restart camera-realsense-d435i@cam{1,2}.service`。
 重复安装脚本不会重启已经运行的进程，升级后必须显式 restart。
 
@@ -124,7 +127,7 @@ HTTP status 成功只说明服务可访问，必须检查 `state`、`error`、�
 - 缺失设备或 `Couldn't resolve requests`：核实序列号、插线、支持的分辨率和 fps；
   profiles 枚举不保证共享 USB2 带宽下能同时启用任意组合。
 - 页面没有有效深度：检查场景距离、遮挡和深度 PNG 的非零比例；能收到 RGB 不代表深度有效。
-- 系统重启后预览不自动恢复：API 可自动启动，但采集设计为 idle；重新执行本地 `preview`。
+- 系统重启后服务与预览不会自动恢复：这是当前按需启动设计，重新执行本地 `preview`。
 - 关闭页面／断开 SSH 后相机仍运行：显式 `stop`；必要时远端停止对应用户 unit。
 
 Git 提交不包含截图、venv、现场记录；远端源码升级与本地 submodule 更新是两项独立操作。
