@@ -22,7 +22,7 @@ uv run --locked camera-realsense-d435i preview --camera cam2
 | cam1 | 349522071221 | <http://127.0.0.1:8086> | `camera-realsense-d435i@cam1.service` |
 | cam2 | 349522072318 | <http://127.0.0.1:8087> | `camera-realsense-d435i@cam2.service` |
 
-在集成仓库 `xcore-controller` 中，也可使用 `./start_camera.sh` 一次启动两台。
+在集成仓库 `xcore-controller` 中，也可使用 `./scripts/start_camera.sh` 一次启动两台。
 关闭网页不会停止采集；请使用网页“停止采集”按钮或以下 `stop` 命令。
 命令返回后相机服务与 SSH 隧道持续运行。当前两个服务均已取消开机／登录自启；
 执行本地 `preview`／`connect` 时才通过 SSH 按需启动 API，`preview` 进一步开始采集。
