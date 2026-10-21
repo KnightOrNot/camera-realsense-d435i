@@ -3,6 +3,16 @@
 在远端 Linux 电脑采集两台 RealSense D435i，通过 SSH 转发，在本地查看 RGB 和深度画面。
 支持独立启停、设备／标定信息和 RGB-D 截图；不依赖 ROS，不导入机械臂或夹爪代码。
 
+## 配置与文档
+
+客户端默认相机、SSH 目标、端口、截图目录和 serve 主机/端口位于
+[config/default.toml](config/default.toml)，用 `--defaults FILE` 覆盖。
+`serve --config` 仍是每台相机的现场 JSON，部署脚本不会覆盖它。
+
+- [架构](docs/index.md)、[安装部署](docs/installation.md)、[采集与截图](docs/stream.md)
+- [CLI](docs/reference/cli.md)、[配置](docs/reference/config.md)、[排障](docs/reference/errors.md)
+- [贡献指南](CONTRIBUTING.md)、[更新记录](CHANGELOG.md)
+
 ## 现场快速启动
 
 当前远端 `rokae@192.168.2.225` 的 `~/project/camera-realsense-d435i/` 已部署两个用户服务。
