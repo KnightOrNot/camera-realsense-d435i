@@ -22,6 +22,10 @@ HTTP 只绑定 `127.0.0.1`。主要路由：
 | `/api/status` | 当前状态、帧计数和错误 |
 | `/api/devices` | 设备信息；`profiles=1` 时枚举 profile |
 | `/api/snapshot` | 返回 zip：RGB JPEG、原始 Z16 PNG 和元数据 |
+| `/api/record/start` | 在唯一 pipeline 上开始无损 RGB/Z16 连续记录 |
+| `/api/record/stop` | 结束记录，写 `COMPLETE.json` |
+| `/api/record/status` | 记录状态、持久化帧数、队列和错误 |
+| `/api/record/frames` | 已落盘帧索引（`after`、`limit`） |
 | `/api/health` | 与 status 相同的健康检查 |
 | `/stream/color.mjpg` | RGB MJPEG |
 | `/stream/depth.mjpg` | 深度伪彩 MJPEG |
@@ -38,7 +42,8 @@ captures/<camera>/<timestamp>/
 ```
 
 `depth.png` 的零值表示无效深度；真实距离为 `raw * depth_scale`。
-RGB 截图复用预览编码，若实验需要无损 RGB，应另行实现原始帧保存。
+RGB 截图复用预览编码；训练数据使用 `record-start` 的无损 RGB PNG，
+它在 JPEG 编码前保存原始数组，并与 Z16 深度、帧号和时间戳一起写入帧索引。
 
 ## 时间
 

@@ -39,6 +39,9 @@ class ClientConfig:
 class ServeConfig:
     host: str = "127.0.0.1"
     port: int = 8086
+    # Lossless recording is only allowed below this directory; empty disables it.
+    record_root: str = "~/project/xcore-data/raw"
+    record_queue: int = 16
 
 
 @dataclass(frozen=True)
@@ -87,6 +90,11 @@ class Config:
             raise ValueError("serve.host must be 127.0.0.1 (loopback only)")
         if not isinstance(self.serve.port, int) or not 1 <= self.serve.port <= 65535:
             raise ValueError("serve.port must be in 1..65535")
+        if not isinstance(self.serve.record_root, str):
+            raise ValueError("serve.record_root must be a string")
+        queue = self.serve.record_queue
+        if type(queue) is not int or not 1 <= queue <= 1000:
+            raise ValueError("serve.record_queue must be an integer in 1..1000")
 
 
 SECTIONS = {"client": ClientConfig, "serve": ServeConfig}

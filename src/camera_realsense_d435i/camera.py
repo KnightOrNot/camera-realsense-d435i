@@ -42,6 +42,9 @@ class Frame:
     depth_jpeg: bytes
     depth_png: bytes
     metadata: dict[str, Any]
+    # Lossless payload for the recorder; None means the frame cannot be recorded.
+    color_rgb: Any = None
+    depth_z16: Any = None
 
 
 def _device_info(rs: Any, device: Any, profiles: bool) -> dict[str, Any]:
@@ -158,8 +161,10 @@ class RealSenseCamera:
         color, depth = frames.get_color_frame(), frames.get_depth_frame()
         if not color or not depth:
             return None
-        rgb = np.asanyarray(color.get_data())
-        raw_depth = np.asanyarray(depth.get_data())
+        # Copy before encoding: frame buffers are reused after this call returns,
+        # and the recorder keeps the payload after the preview is assembled.
+        rgb = np.asanyarray(color.get_data()).copy()
+        raw_depth = np.asanyarray(depth.get_data()).copy()
         depth_preview = np.asanyarray(self.colorizer.colorize(depth).get_data())
 
         def encode(array: Any, format_name: str) -> bytes:
@@ -167,7 +172,7 @@ class RealSenseCamera:
             options = (
                 {"quality": self.configuration.jpeg_quality}
                 if format_name == "JPEG"
-                else {}
+                else {"compress_level": 1}
             )
             Image.fromarray(array).save(stream, format=format_name, **options)
             return stream.getvalue()
@@ -186,6 +191,8 @@ class RealSenseCamera:
             encode(depth_preview, "JPEG"),
             encode(raw_depth, "PNG"),
             meta,
+            rgb,
+            raw_depth,
         )
 
     def close(self) -> None:

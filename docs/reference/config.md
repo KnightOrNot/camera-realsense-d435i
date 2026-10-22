@@ -27,10 +27,16 @@ snapshot_dir = "captures"
 [serve]
 host = "127.0.0.1"
 port = 8086
+record_root = "~/project/xcore-data/raw"
+record_queue = 16
 ```
 
 `host` 只允许 loopback，避免无认证的相机控制端口暴露到局域网。
 远端部署时每台相机用 `--port` 覆盖为 8086/8087。
+
+`record_root` 限制无损记录目录，留空则禁用记录 API；`record_queue` 是采集线程与
+PNG 写盘线程之间的有界队列，满了会把该段记录标记为失败而不是丢帧续写。
+记录目录由 controller 按 `<record_root>/<session>/<episode>/camN` 传入。
 
 ## 现场 JSON（不进入 Git）
 

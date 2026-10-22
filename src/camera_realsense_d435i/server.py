@@ -67,6 +67,16 @@ class Handler(BaseHTTPRequestHandler):
                 self._json(202, self.server.manager.start(body))
             elif self.path == "/api/stop":
                 self._json(200, self.server.manager.stop())
+            elif self.path == "/api/record/start":
+                self._json(202, self.server.manager.start_recording(body))
+            elif self.path == "/api/record/stop":
+                self._json(
+                    200,
+                    self.server.manager.stop_recording(
+                        complete=body.get("complete", True),
+                        reason=body.get("reason"),
+                    ),
+                )
             else:
                 self._json(404, {"error": "Unknown endpoint"})
         except (ValueError, TypeError) as exc:
@@ -86,6 +96,13 @@ class Handler(BaseHTTPRequestHandler):
             elif path == "/api/devices":
                 profiles = parse_qs(request.query).get("profiles") == ["1"]
                 self._json(200, {"devices": devices(profiles)})
+            elif path == "/api/record/status":
+                self._json(200, manager.recorder.status())
+            elif path == "/api/record/frames":
+                query = parse_qs(request.query)
+                after = int(query.get("after", ["-1"])[0])
+                limit = int(query.get("limit", ["1000"])[0])
+                self._json(200, {"frames": manager.recorder.frames(after, limit)})
             elif path == "/api/snapshot":
                 frame = manager.frame()
                 data = io.BytesIO()
@@ -127,8 +144,17 @@ class Handler(BaseHTTPRequestHandler):
                 self._json(503, {"error": str(exc)})
 
 
-def serve(host: str, port: int, defaults: Configuration) -> None:
-    manager = CaptureManager(defaults)
+def serve(
+    host: str,
+    port: int,
+    defaults: Configuration,
+    *,
+    record_root: str = "",
+    record_queue: int = 16,
+) -> None:
+    manager = CaptureManager(
+        defaults, record_root=record_root, record_queue=record_queue
+    )
     server = CameraHTTPServer((host, port), manager)
 
     def stop(*_args: Any) -> None:

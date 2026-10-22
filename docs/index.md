@@ -13,6 +13,7 @@ flowchart LR
     H --> F[最新帧缓存<br/>RGB / 深度 / MJPEG]
     F --> B[浏览器]
     H --> S[截图<br/>RGB PNG + Z16 PNG + 元数据]
+    F --> R[连续记录<br/>无损 RGB/Z16 + 帧索引]
 ```
 
 ## 组成
@@ -24,6 +25,7 @@ flowchart LR
 | `server.py` | loopback HTTP API 与命令执行 |
 | `manager.py` | 单一 pipeline、帧缓存、订阅者共享 |
 | `camera.py` | pyrealsense2 设备、profile、截图与元数据 |
+| `recorder.py` | 同一 pipeline 的无损 RGB／Z16 连续记录、有界队列与提交标记 |
 | `web.py` | 浏览器页面 |
 
 ## 生命周期

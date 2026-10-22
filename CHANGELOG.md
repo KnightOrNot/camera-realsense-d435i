@@ -1,5 +1,13 @@
 # 更新记录
 
+## 2026-10-22
+
+- 新增同一采集 pipeline 的无损 RGB／Z16 连续记录分支：`record-start/stop/status/frames`
+  与 `/api/record/*`；有界队列、写盘线程和 `COMPLETE.json` 提交标记。
+- `serve` 新增 `record_root`（目录白名单，留空禁用）和 `record_queue`。
+- 采集帧增加无损 RGB/Z16 载荷；现有快照与预览行为不变。
+- 新增记录单元测试；固定 `dev` 组包含 numpy/pillow 以便离线测试。
+
 ## 2026-10-21
 
 - 配置参数支持放在子命令前或后；严格拒绝非法端口类型。

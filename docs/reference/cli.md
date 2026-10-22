@@ -19,6 +19,10 @@ camera-realsense-d435i serve --config cam1.json [--host 127.0.0.1] [--port 8086]
 | `status` | 远端状态、帧计数和错误 |
 | `info [--profiles]` | 设备信息，可选 profile 列表 |
 | `snapshot [--output DIR]` | 下载 RGB JPEG、Z16 PNG 和元数据 |
+| `record-start --directory DIR --session S --episode E` | 在同一 pipeline 上开始无损 RGB/Z16 记录 |
+| `record-stop [--incomplete] [--reason R]` | 结束记录；默认 complete=true |
+| `record-status` | 记录状态、持久化帧数、队列、错误 |
+| `record-frames [--after N] [--limit N]` | 读取已落盘的帧索引 |
 | `disconnect` | 关闭本地隧道 |
 
 公共参数：`--camera cam1|cam2`、`--url`、`--local-port`、`--defaults`。
@@ -36,6 +40,10 @@ start/preview 支持 `--width`、`--height`、`--fps`、`--jpeg-quality`。
 | `--port` | `serve.port` |
 | `--config` | 相机 JSON（必需）：serial、width、height、fps、jpeg_quality |
 | `--defaults` | TOML 默认值文件 |
+
+记录路由：`POST /api/record/start`（directory、session、episode）、
+`POST /api/record/stop`（complete、reason）、`GET /api/record/status`、
+`GET /api/record/frames?after=N&limit=N`。记录目录必须在 `serve.record_root` 下。
 
 ## 环境变量
 

@@ -19,3 +19,8 @@ snapshot_dir = "captures"
 # 远端服务只允许绑定 loopback，禁止无认证地暴露到局域网。
 host = "127.0.0.1"
 port = 8086
+# 无损 RGB／Z16 连续记录只允许写在该目录下；留空则禁用记录 API。
+# 远端数据根目录与 xcore-dataset 的 ~/project/xcore-data/raw 保持一致。
+record_root = "~/project/xcore-data/raw"
+# 采集线程与写盘线程之间的有界队列；满队列会把该段记录标记为失败。
+record_queue = 16

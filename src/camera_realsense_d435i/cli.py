@@ -42,6 +42,10 @@ def parser(config: Config | None = None) -> argparse.ArgumentParser:
         "info",
         "snapshot",
         "preview",
+        "record-start",
+        "record-stop",
+        "record-status",
+        "record-frames",
     ):
         entry = commands.add_parser(name, parents=[common])
         if name in ("connect", "disconnect", "preview"):
@@ -63,6 +67,16 @@ def parser(config: Config | None = None) -> argparse.ArgumentParser:
             entry.add_argument("--profiles", action="store_true")
         if name == "snapshot":
             entry.add_argument("--output", type=Path)
+        if name == "record-start":
+            entry.add_argument("--directory", required=True)
+            entry.add_argument("--session", required=True)
+            entry.add_argument("--episode", required=True)
+        if name == "record-stop":
+            entry.add_argument("--incomplete", action="store_true")
+            entry.add_argument("--reason")
+        if name == "record-frames":
+            entry.add_argument("--after", type=int, default=-1)
+            entry.add_argument("--limit", type=int, default=1000)
     server = commands.add_parser(
         "serve", help="Run on the computer connected to the camera"
     )
@@ -89,7 +103,13 @@ def run(args: argparse.Namespace) -> dict:
         camera_config = Configuration(**json.loads(args.config.read_text()))
         if not camera_config.serial:
             raise ValueError("A server config must explicitly select a camera serial")
-        serve(args.host, args.port, camera_config)
+        serve(
+            args.host,
+            args.port,
+            camera_config,
+            record_root=config.serve.record_root,
+            record_queue=config.serve.record_queue,
+        )
         return {"stopped": True}
     remote_port = getattr(args, "remote_port", None) or config.client.port(args.camera)
     port = args.local_port or config.client.port(args.camera)
@@ -129,6 +149,16 @@ def run(args: argparse.Namespace) -> dict:
         return client.request(
             "/api/devices?profiles=" + ("1" if args.profiles else "0")
         )
+    if args.command == "record-start":
+        return client.record_start(
+            args.directory, session=args.session, episode=args.episode
+        )
+    if args.command == "record-stop":
+        return client.record_stop(complete=not args.incomplete, reason=args.reason)
+    if args.command == "record-status":
+        return client.record_status()
+    if args.command == "record-frames":
+        return client.record_frames(args.after, args.limit)
     if args.command == "snapshot":
         output = args.output or Path(config.client.snapshot_dir) / args.camera / (
             datetime.now().strftime("%Y%m%d-%H%M%S-%f")

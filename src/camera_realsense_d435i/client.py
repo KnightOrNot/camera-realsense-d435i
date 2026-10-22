@@ -48,6 +48,28 @@ class Client:
                 raise TimeoutError(f"Camera startup timed out: {state}")
             time.sleep(0.15)
 
+    def record_start(
+        self, directory: str, *, session: str, episode: str
+    ) -> dict[str, Any]:
+        return self.request(
+            "/api/record/start",
+            {"directory": directory, "session": session, "episode": episode},
+        )
+
+    def record_stop(
+        self, *, complete: bool = True, reason: str | None = None
+    ) -> dict[str, Any]:
+        return self.request(
+            "/api/record/stop", {"complete": complete, "reason": reason}
+        )
+
+    def record_status(self) -> dict[str, Any]:
+        return self.request("/api/record/status")
+
+    def record_frames(self, after: int = -1, limit: int = 1000) -> list[dict]:
+        result = self.request(f"/api/record/frames?after={after}&limit={limit}")
+        return result["frames"]
+
     def snapshot(self, destination: Path) -> dict:
         with self.opener.open(
             self.url + "/api/snapshot", timeout=self.timeout

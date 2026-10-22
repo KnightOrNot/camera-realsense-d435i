@@ -8,6 +8,7 @@ import uuid
 from typing import Any, Callable
 
 from .camera import Configuration, Frame, RealSenseCamera
+from .recorder import RawRecorder
 
 
 class CaptureManager:
@@ -16,9 +17,13 @@ class CaptureManager:
         defaults: Configuration,
         factory: Callable[..., Any] = RealSenseCamera,
         frame_timeout: float = 5.0,
+        *,
+        record_root: str = "",
+        record_queue: int = 16,
     ):
         self.defaults, self.factory = defaults, factory
         self.frame_timeout = frame_timeout
+        self.recorder = RawRecorder(record_root, queue_size=record_queue)
         self.condition = threading.Condition()
         self.thread: threading.Thread | None = None
         self.stopping = threading.Event()
@@ -83,6 +88,9 @@ class CaptureManager:
                     self.sequence += 1
                     self.phase = "streaming"
                     self.condition.notify_all()
+                # The recorder only enqueues (bounded); the capture loop never
+                # waits for PNG encoding or disk writes.
+                self.recorder.submit(frame)
         except Exception as exc:
             with self.condition:
                 self.error = f"{type(exc).__name__}: {exc}"
@@ -114,7 +122,29 @@ class CaptureManager:
             thread.join(timeout=10)
             if thread.is_alive():
                 raise RuntimeError("Camera is still stopping; no new session permitted")
+        if self.recorder.recording:
+            self.recorder.stop(complete=False, reason="camera stopped while recording")
         return self.status()
+
+    def start_recording(self, options: dict[str, Any]) -> dict[str, Any]:
+        unknown = options.keys() - {"directory", "session", "episode"}
+        if unknown:
+            raise ValueError(f"unknown recording options: {sorted(unknown)}")
+        with self.condition:
+            if self.phase != "streaming":
+                raise RuntimeError("start the camera before recording")
+            metadata = dict(self.metadata)
+        return self.recorder.start(
+            options["directory"],
+            session=options["session"],
+            episode=options["episode"],
+            metadata=metadata,
+        )
+
+    def stop_recording(
+        self, *, complete: bool = True, reason: str | None = None
+    ) -> dict[str, Any]:
+        return self.recorder.stop(complete=complete, reason=reason)
 
     def status(self) -> dict[str, Any]:
         with self.condition:
@@ -137,6 +167,7 @@ class CaptureManager:
                 "error": self.error,
                 "configuration": self.configuration.dictionary(),
                 "metadata": self.metadata,
+                "recording": self.recorder.status(),
             }
 
     def frame(self) -> Frame:

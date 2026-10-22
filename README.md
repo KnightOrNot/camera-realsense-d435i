@@ -49,6 +49,10 @@ uv run --locked camera-realsense-d435i preview --camera cam2
 | `status` | 采集状态、帧龄、实际观察帧率及标定信息 | `--camera cam2` |
 | `info` | 枚举远端相机／固件／USB／传感器 | `--profiles` 显示支持的 profiles；会列出两台 |
 | `snapshot` | 在本地保存一次 RGB＋原始深度＋元数据 | `--output ./captures/example`；目标目录必须不存在 |
+| `record-start` | 在同一采集 pipeline 上开始无损连续记录 | `--directory DIR --session S --episode E` |
+| `record-stop` | 结束当前记录并写 `COMPLETE.json` | `--incomplete --reason "..."` 标记失败 |
+| `record-status` | 记录状态、已持久化帧数、队列和错误 | 不打开设备 |
+| `record-frames` | 读取已落盘的帧索引 | `--after 0 --limit 500` |
 | `stop` | 停止指定实例采集，释放设备 | `--camera cam2` |
 | `disconnect` | 关闭指定 SSH 隧道 | 不会自动停止远端采集，先运行 `stop` |
 | `serve` | 远端运行 HTTP 服务 | 通常由 systemd 调用，见部署文档 |
@@ -80,9 +84,24 @@ uv run --locked camera-realsense-d435i disconnect --camera cam2
 以及远端接收的 wall／monotonic 时间。设备时间与主机时间是不同的时钟。
 
 深度保持原生视角，**没有对齐 RGB**；不能直接用彩色图同坐标像素取深度。
-两个进程互相独立，当前没有双机硬同步，也没有相机与机械臂时间同步。
-尚未实现 IMU 数据采集、连续录像、点云和机械臂数据记录集成。
-预览采用最新帧，允许跳帧；这是实时查看接口，不能当作无丢帧记录接口。
+两个进程互相独立，当前没有双机硬同步，也没有相机与机械臂硬同步。
+尚未实现 IMU 数据采集和点云；机械臂数据由 controller 侧按远端时间对齐。
+
+连续记录（`record-start`）直接接入唯一采集 pipeline，不另开设备。记录目录必须在
+`serve.record_root` 之下，包含：
+
+```text
+<directory>/
+├── manifest.json     # 设备/内参/深度尺度快照、session、episode
+├── rgb/000000.png    # 无损 RGB，JPEG 编码前保存
+├── depth/000000.png  # 无损 uint16 Z16
+├── frames.jsonl      # 每帧 RGB/深度帧号、SDK 时间戳/domain、主机接收时间
+└── COMPLETE.json     # complete=true 才代表整段记录可信
+```
+
+采集线程只入有界队列，PNG 编码和写盘在独立线程；队列满或写盘失败会把该段标记为
+`failed`，不会静默丢帧后仍声称完整。预览仍允许跳帧；记录片段才是训练数据来源。
+离线测试覆盖无损 PNG、帧索引、目录边界、写盘失败和 HTTP 记录接口。
 
 ## 2026-10-21 现场验证
 
@@ -99,7 +118,8 @@ uv run --locked camera-realsense-d435i disconnect --camera cam2
 - 后续按用户要求将相机与夹爪服务均改为按需启动，已验证相机 unit 的自启状态为 disabled；
   修改自启配置时未中断正在运行的相机会话，无需重启整机。
 - 离线测试覆盖单采集所有权、启停重启、构造／采集错误、无帧超时、陈旧帧拒绝、
-  HTTP MJPEG、原始深度快照保存及错误请求；命令见开发文档。
+  HTTP MJPEG、原始深度快照保存、错误请求以及无损 RGB／Z16 连续记录；
+  命令见开发文档。连续记录的真实双机吞吐仍需单独做长时间验收。
 - 本环境未提供可用的自动化浏览器；已验证网页 HTTP、实际 MJPEG 帧和截图，
   浏览器端页面排版及按钮点击需在用户浏览器中验收。
 
