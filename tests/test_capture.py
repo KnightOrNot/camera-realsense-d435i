@@ -206,3 +206,53 @@ main(['--help'])
     )
     assert result.returncode == 0
     assert "preview" in result.stdout
+
+
+class _Frameset:
+    def __init__(self, frame):
+        self.frame = frame
+
+    def get_depth_frame(self):
+        return self.frame
+
+
+class _Aligner:
+    def __init__(self, result=None, error=None):
+        self.result, self.error, self.calls = result, error, 0
+
+    def process(self, frames):
+        self.calls += 1
+        if self.error:
+            raise self.error
+        return self.result
+
+
+def test_preview_depth_falls_back_to_native_without_an_aligner():
+    from camera_realsense_d435i.camera import preview_depth
+
+    native = object()
+    assert preview_depth(None, object(), native) == (native, "native")
+
+
+def test_preview_depth_uses_the_color_aligned_frame():
+    from camera_realsense_d435i.camera import preview_depth
+
+    aligned = object()
+    aligner = _Aligner(_Frameset(aligned))
+    assert preview_depth(aligner, object(), object()) == (aligned, "color")
+    assert aligner.calls == 1
+
+
+@pytest.mark.parametrize(
+    "aligner",
+    [
+        _Aligner(error=RuntimeError("no color frame in the frameset")),
+        _Aligner(_Frameset(None)),
+        _Aligner(None),
+    ],
+)
+def test_preview_depth_never_drops_a_frame_when_alignment_fails(aligner):
+    from camera_realsense_d435i.camera import preview_depth
+
+    native = object()
+    assert preview_depth(aligner, object(), native) == (native, "native")

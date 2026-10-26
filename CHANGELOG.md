@@ -1,5 +1,13 @@
 # 更新记录
 
+## 2026-10-26
+
+- 新增 `align_depth_to_color`（默认 `true`）：深度**预览**经 `rs.align` 重投影到
+  彩色相机视角，同一台相机的 RGB 与深度画面视域一致。录制的 `depth.png` 保持不变，
+  仍是原生 Z16 视角；该键不影响记录数据和元数据中的 `depth_alignment`。
+- 逐帧元数据新增 `preview_depth_alignment`（`color`／`native`）；无法对齐时回退到
+  原生深度，不会丢帧。
+
 ## 2026-10-22
 
 - 新增同一采集 pipeline 的无损 RGB／Z16 连续记录分支：`record-start/stop/status/frames`

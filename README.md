@@ -83,7 +83,9 @@ uv run --locked camera-realsense-d435i disconnect --camera cam2
 元数据包含原生深度／RGB 内参、深度到 RGB 外参、各流帧号、SDK 时间戳及 domain，
 以及远端接收的 wall／monotonic 时间。设备时间与主机时间是不同的时钟。
 
-深度保持原生视角，**没有对齐 RGB**；不能直接用彩色图同坐标像素取深度。
+网页深度预览默认对齐到彩色相机视角（`align_depth_to_color`，见配置参考），
+两台画面视域一致；但**保存的 `depth.png` 仍是原生深度视角**，不能直接用彩色图
+同坐标像素取深度。需要原生预览时把该键设为 `false`。
 两个进程互相独立，当前没有双机硬同步，也没有相机与机械臂硬同步。
 尚未实现 IMU 数据采集和点云；机械臂数据由 controller 侧按远端时间对齐。
 

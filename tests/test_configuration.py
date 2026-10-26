@@ -85,3 +85,15 @@ def test_invalid_values(tmp_path: Path) -> None:
 def test_invalid_types_and_nonfinite_values(tmp_path, text):
     with pytest.raises(ValueError):
         load_config(write(tmp_path, text))
+
+
+def test_depth_preview_alignment_flag_round_trips():
+    from camera_realsense_d435i.camera import Configuration
+
+    assert Configuration().align_depth_to_color is True
+    assert (
+        Configuration(align_depth_to_color=False).dictionary()["align_depth_to_color"]
+        is False
+    )
+    with pytest.raises(ValueError, match="align_depth_to_color"):
+        Configuration(align_depth_to_color="yes")

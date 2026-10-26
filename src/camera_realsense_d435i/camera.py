@@ -21,6 +21,10 @@ class Configuration:
     fps: int = 15
     serial: str = ""
     jpeg_quality: int = 80
+    # The D435i depth sensor sees a wider field of view than the color sensor.
+    # Aligning the depth *preview* to color makes both tiles show the same
+    # scene; the recorded Z16 payload stays native (see depth_png).
+    align_depth_to_color: bool = True
 
     def __post_init__(self) -> None:
         for name, upper in (("width", 1920), ("height", 1080), ("fps", 90)):
@@ -31,6 +35,8 @@ class Configuration:
             raise ValueError("jpeg_quality must be an integer in 1..95")
         if not isinstance(self.serial, str):
             raise ValueError("serial must be a string")
+        if type(self.align_depth_to_color) is not bool:
+            raise ValueError("align_depth_to_color must be a boolean")
 
     def dictionary(self) -> dict[str, Any]:
         return asdict(self)
@@ -78,6 +84,23 @@ def devices(profiles: bool = False) -> list[dict[str, Any]]:
     return [_device_info(rs, d, profiles) for d in rs.context().query_devices()]
 
 
+def preview_depth(aligner: Any, frames: Any, native: Any) -> tuple[Any, str]:
+    """Return the frame used for the depth preview and how it was obtained.
+
+    Alignment maps native depth into the color camera's viewpoint, so the RGB
+    and depth tiles cover the same field of view. A frameset that cannot be
+    aligned falls back to native depth instead of failing the capture.
+    """
+    if aligner is None:
+        return native, "native"
+    try:
+        aligned = aligner.process(frames)
+    except Exception:  # noqa: BLE001 - never lose a frame to the preview
+        return native, "native"
+    frame = aligned.get_depth_frame() if aligned else None
+    return (frame, "color") if frame else (native, "native")
+
+
 def _intrinsics(profile: Any) -> dict[str, Any]:
     intr = profile.as_video_stream_profile().get_intrinsics()
     return {
@@ -97,6 +120,7 @@ class RealSenseCamera:
         self.configuration = configuration
         self.pipeline: Any = None
         self.colorizer: Any = None
+        self.aligner: Any = None
         self.metadata: dict[str, Any] = {}
 
     def open(self) -> dict[str, Any]:
@@ -141,10 +165,19 @@ class RealSenseCamera:
                     "translation_m": list(extr.translation),
                 },
                 "depth_alignment": "native_depth",
+                "depth_preview_alignment": (
+                    "color" if c.align_depth_to_color else "native"
+                ),
+                # Aligned depth carries the color camera's intrinsics, so the
+                # preview frame and the color frame share one pinhole model.
+                "depth_preview_intrinsics": _intrinsics(
+                    color if c.align_depth_to_color else depth
+                ),
                 "depth_format": "z16",
                 "timestamp_note": "SDK clocks and server receive clock are separate",
             }
             self.colorizer = rs.colorizer()
+            self.aligner = rs.align(rs.stream.color) if c.align_depth_to_color else None
             return self.metadata
         except BaseException:
             self.close()
@@ -165,7 +198,8 @@ class RealSenseCamera:
         # and the recorder keeps the payload after the preview is assembled.
         rgb = np.asanyarray(color.get_data()).copy()
         raw_depth = np.asanyarray(depth.get_data()).copy()
-        depth_preview = np.asanyarray(self.colorizer.colorize(depth).get_data())
+        shown, alignment = preview_depth(self.aligner, frames, depth)
+        depth_preview = np.asanyarray(self.colorizer.colorize(shown).get_data())
 
         def encode(array: Any, format_name: str) -> bytes:
             stream = io.BytesIO()
@@ -180,6 +214,7 @@ class RealSenseCamera:
         meta = dict(self.metadata)
         meta["received_monotonic_ns"] = received
         meta["received_wall_time_ns"] = time.time_ns()
+        meta["preview_depth_alignment"] = alignment
         for name, frame in (("color", color), ("depth", depth)):
             meta[name] = {
                 "frame_number": frame.get_frame_number(),

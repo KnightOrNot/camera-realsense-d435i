@@ -48,8 +48,14 @@ PNG 写盘线程之间的有界队列，满了会把该段记录标记为失败�
 ```
 
 ```json
-{"serial": "349522071221", "width": 640, "height": 480, "fps": 15, "jpeg_quality": 80}
+{"serial": "349522071221", "width": 640, "height": 480, "fps": 15, "jpeg_quality": 80,
+ "align_depth_to_color": true}
 ```
+
+`align_depth_to_color`（默认 `true`）只影响**深度预览**：把深度重投影到彩色相机
+视角，使网页上同一台相机的 RGB 与深度画面视域一致。D435i 的深度传感器视场比彩色
+传感器宽，不对齐时深度画面会明显更大。录制的 `depth.png` 仍是**原生 Z16 视角**，
+不受该选项影响；旧 JSON 没有这个键时按 `true` 处理。
 
 安装/部署脚本保留已有 JSON，不用仓库默认值覆盖。修改后先停止采集，再重启
 对应 unit。
